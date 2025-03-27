@@ -5,9 +5,9 @@ define("USER", "root");
 define("PASS", "");
 define("DATABASE", "uni_hospital_session");
 
-$conn = mysqli_connect(HOST,USER,PASS,DATABASE);
+$mysqli = new mysqli("HOST","USER","PASS","DATABASE");
 
-if($conn -> connect_error){
+if($mysqli -> connect_error){
     echo "Erro de conexao";
 }
 

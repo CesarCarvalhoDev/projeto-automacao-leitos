@@ -1,7 +1,8 @@
-<?php 
+<?php
 include("../functions/conexao.php");
 
-function sanitizar_entradas($nome, $tipo_prof, $telefone, $email, $senha, $cpf) {
+function sanitizar_entradas($nome, $tipo_prof, $telefone, $email, $senha, $cpf)
+{
     $nome = trim($nome);
     $tipo_prof = trim($tipo_prof);
     $telefone = trim($telefone);
@@ -16,48 +17,69 @@ function sanitizar_entradas($nome, $tipo_prof, $telefone, $email, $senha, $cpf) 
     $cpf = filter_var($cpf, FILTER_SANITIZE_NUMBER_INT);
 
     return [
-        'nome' => $nome, 
+        'nome' => $nome,
         'tipo_prof' => $tipo_prof,
         'telefone' => $telefone,
         'email' => $email,
         'senha' => $senha,
         'cpf' => $cpf
     ];
-
 }
 
 
-function validar_dados($dados){
-    $erros = [];
-    if(!filter_var($dados['email'], FILTER_VALIDATE_EMAIL) || strlen($dados['email'] == 0)){
-        $erros = 'Email inválido!';
+function validar_dados($dados)
+{
+    $erros = array();
+    if (!filter_var($dados['email'], FILTER_VALIDATE_EMAIL)) {
+        $erros[] = 'Email inválido!';
     }
-    if(!filter_var($dados['telefone'], FILTER_VALIDATE_INT) || strlen($dados['telefone'] == 0)){
-        $erros = 'Telefone inválido';
+    if (!isset($dados['telefone']) || !ctype_digit($dados['telefone']) || strlen($dados['telefone']) != 11) {
+        $erros[] = 'Telefone inválido';
     }
-    if(!filter_var($dados['cpf'], FILTER_VALIDATE_INT) || strlen($dados['cpf']) != 11){
-        $erros = 'CPF inválido!';
+    if (!isset($dados['cpf']) || !ctype_digit($dados['cpf']) || strlen($dados['cpf']) != 11) {
+        $erros[] = 'CPF inválido!';
     }
-    if(!is_string($dados['nome']) || strlen($dados['nome'] == 0)){
-        $erros = 'Nome de colaborador inválido';
+    if (!is_string($dados['nome']) || empty($dados['nome'])) {
+        $erros[] = 'Nome de colaborador inválido';
     }
-    if(!is_string($dados['tipo_prof']) || strlen($dados['tipo_prof'] == 0)){
-        $erros = 'Tipo de profissional inválido';
+    if (!is_string($dados['tipo_prof']) || empty($dados['tipo_prof'])) {
+        $erros[] = 'Tipo de profissional inválido';
     }
-    if(!is_string($dados['senha']) || strlen($dados['senha'])){
-        $erros = 'Formato de senha inválido';
+    if (!is_string($dados['senha']) || empty($dados['senha']) || strlen($dados['senha']) < 8) {
+        $erros[] = 'Formato de senha inválido! A senha deve conter pelo menos 8 caracteres.';
     }
 
+    return $erros;
 }
 
-if(isset($_POST['btn_enviar'])){
-    $primeiro_nome = $_POST['txt_primeiro_nome'];
-    $sobre_nome = $_POST['txt_sobre_nome'];
-    $nome = $primeiro_nome + ' ' + $sobre_nome;
-
-    $email = 
+function InsertDados($dados)
+{
+    global $mysqli;
+    $senha_hash = password_hash($dados['senha'], PASSWORD_DEFAULT);
+    $stmt = $mysqli->prepare('INSERT INTO profissionais (nome, tipo_prof, telefone, cpf, email, senha) VALUES (?,?,?,?,?,?)');
+    $stmt->bind_param('ssssss', $dados['nome'], $dados['tipo_prof'], $dados['telefone'], $dados['cpf'], $dados['email'], $senha_hash);
+    if ($stmt->execute()) {
+        return 'Sucesso ao cadastrar colaborador';
+    } else {
+        return 'Erro ao cadastrar colaborador: '. $stmt->error;
+    }
 }
 
+if (isset($_POST['btn-submit'])) {
+    $primeiro_nome = $_POST['txt-primeiro_nome'];
+    $sobrenome = $_POST['txt_sobrenome'];
+    $nome = $primeiro_nome . ' ' . $sobrenome;
+    $tipo_prof = $_POST['txt-tipo_profissional'];
+    $telefone = $_POST['txt-telefone'];
+    $cpf = $_POST['txt-cpf'];
+    $email = $_POST['txt-email'];
+    $senha = $_POST['txt-senha'];
 
-?>
-
+    $dados = sanitizar_entradas($nome, $tipo_prof, $telefone, $email, $senha, $cpf);
+    $erros = validar_dados($dados);
+    if (empty($erros)) {
+        $status_consulta = InsertDados($dados);
+    } else {
+        echo implode('<br>', $erros);
+    }
+}
